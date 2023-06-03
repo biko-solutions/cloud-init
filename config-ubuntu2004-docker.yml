@@ -21,9 +21,9 @@ runcmd:
   - ufw allow OpenSSH
   - ufw enable
   #configuring SSH
+  - sed -i -e '/^PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
   - sed -i -e '/^PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
   - sed -i -e '$aAllowUsers artem' /etc/ssh/sshd_config
-  - restart ssh
   #docker install
   - sudo install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
