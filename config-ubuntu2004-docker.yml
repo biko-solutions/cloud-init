@@ -21,7 +21,7 @@ runcmd:
   - ufw allow OpenSSH
   - ufw enable
   #configuring SSH
-  - sed -i -e '/^PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
+  - sed -i 's/[#]*PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
   - sed -i -e '/^PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
   - sed -i -e '$aAllowUsers artem' /etc/ssh/sshd_config
   #docker install
