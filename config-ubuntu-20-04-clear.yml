@@ -7,6 +7,12 @@ users:
     shell: /bin/bash
     ssh_authorized_keys:
       - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAYEAzmQBmQMomAg1nwZIzqKsBq5CDncPK5kXHpsoT63CRYcK4Uz55f5IwG41r2d4Y8iMj1S0RdDEEEmApX2esK8f079tFlDe19WIQuJ/vEo2YUjb0o5CMxfetybwbTzkrAz1KoLBHvkKqAWJZ/tI6+VJwlh5l1ach3FjnwwBlC3PDhLN4FxvYnAoE1zwwK6m5CYmcQFjCY6l3VF5Zt6kqnI5ZzXi9oJ9AszzENM0XsqIEV5My1/0gLqTM1cE7rPQRc7i++K0pyHD9wfIZ19xHVq+TQikRG7VRKfs9EgNvQAqy6XUUCSdbigxAgvSVijE/p+4RcGRVpY5L+vEeLdeTTmaE6Ngh66megymkOc7NBm21rU7OVXn/szDMABtqx2IAGFwm2raF71ZZ4Hfygv81hhi0sREEebN74IU2r+l8S4o9PFyFnIcUn55I4XaPS/MbXd+KK34Sruh1JJCwUjsZsE8cgYG/2XYtFLOlI5/FHfBznVDirFIn33qekIAd9rOQU1v rsa-key-20220409-ubuntu-servers
+  - name: bikoadmin
+    groups: users, admin
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCIGu8mXduHT/w2rhpioE6qt40wr1u4QfVDRq/oXtOXVzCmO4xNf8FY8ytuMqjl4jRIWRMut1GTqEWfYANSnr17Ih+xkiik2mkD/RSpvKUNIixh0LSayL3hRFDLo81GI+PY6J4NumUSva9E6wmBtaDHuNAexDHF9SUniYqaRBXIytT+pBtCxG8vZNUGJFNd32PoEE1vhZaPFev7sVJFI+2xu4P+Cwe7ohCYcPbyDrI6zcRhRQRSRX6WxJ72AfebSA+rgipGbli0aDTO1LJ18URDBQ+ES7Lw4XDwNeGl5qawazewvUgh2lUOr1ayMuorbc43Mduc7QcMINi6iSGjz4ddqz52fZRcxz6Z8wv4YZ6FmpzxUj+0g/yzpqsLx3g9IVzjuqfXUTt7ygpoAGoUDjBUrgw6rm2chNgsokP2jCmRAzmj9qA1+6vS640mlw7Bqrl0BWB+ORLFb0k1BSoxEBtmJjfMrainIQnQ0nKP5Re1oO/WBh8nz2K9f7snq+q+38= artem@artem-ZenBook-UX434IQ-UM433IQ
 package_update: true
 package_upgrade: true
 packages:
@@ -19,5 +25,5 @@ runcmd:
   #configuring SSH
   - sed -i 's/[#]*PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
   - sed -i -e '/^PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
-  - sed -i -e '$aAllowUsers artem' /etc/ssh/sshd_config
+  - sed -i -e '$aAllowUsers artem bikoadmin' /etc/ssh/sshd_config
   - reboot
