@@ -21,6 +21,8 @@ packages:
   - software-properties-common
 runcmd:
   - ufw allow OpenSSH
+  - ufw allow from any to any port 80
+	- ufw allow from any to any port 443
   - ufw enable
   #configuring SSH
   - sed -i 's/[#]*PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
