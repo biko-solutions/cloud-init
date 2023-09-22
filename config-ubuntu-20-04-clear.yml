@@ -20,6 +20,10 @@ packages:
   - mc
   - software-properties-common
 runcmd:
+  #configuring fail2ban
+  - printf "[sshd]\nenabled = true\nbanaction = iptables-multiport" > /etc/fail2ban/jail.local
+  - systemctl enable fail2ban
+  #UFW config
   - ufw allow OpenSSH
   - ufw allow from any to any port 80
   - ufw allow from any to any port 443
