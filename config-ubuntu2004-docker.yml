@@ -1,13 +1,9 @@
 #cloud-config
 timezone: Europe/Kiev
 users:
-  - name: artem
-    groups: users, admin
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    shell: /bin/bash
-    ssh_authorized_keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAYEAzmQBmQMomAg1nwZIzqKsBq5CDncPK5kXHpsoT63CRYcK4Uz55f5IwG41r2d4Y8iMj1S0RdDEEEmApX2esK8f079tFlDe19WIQuJ/vEo2YUjb0o5CMxfetybwbTzkrAz1KoLBHvkKqAWJZ/tI6+VJwlh5l1ach3FjnwwBlC3PDhLN4FxvYnAoE1zwwK6m5CYmcQFjCY6l3VF5Zt6kqnI5ZzXi9oJ9AszzENM0XsqIEV5My1/0gLqTM1cE7rPQRc7i++K0pyHD9wfIZ19xHVq+TQikRG7VRKfs9EgNvQAqy6XUUCSdbigxAgvSVijE/p+4RcGRVpY5L+vEeLdeTTmaE6Ngh66megymkOc7NBm21rU7OVXn/szDMABtqx2IAGFwm2raF71ZZ4Hfygv81hhi0sREEebN74IU2r+l8S4o9PFyFnIcUn55I4XaPS/MbXd+KK34Sruh1JJCwUjsZsE8cgYG/2XYtFLOlI5/FHfBznVDirFIn33qekIAd9rOQU1v rsa-key-20220409-ubuntu-servers
   - name: bikoadmin
+    uid: 1000
+    gid: 1000
     groups: users, admin
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
