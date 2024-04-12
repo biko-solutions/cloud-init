@@ -19,20 +19,29 @@ BASE_DIR=$(pwd)
 
 exec > >(tee "$BASE_DIR"/install_project.log) 2>&1
 
-PROJECT_NAME="prioritet"
-DEV_PATH=$(pwd)/"${PROJECT_NAME}"/dev
-STAGE_PATH=$(pwd)/"${PROJECT_NAME}"/stage
-REPO_URI="git@github.com:biko-solutions/prioritet.git"
+# Пользователь от имени которого будет запускаться odoo
+OE_USER="bikoadmin"
+# Репозиторий откуда мы будем брать проект
+REPO_URI=""
+# Название проекта она же папка проекта
+PROJECT_NAME=""
+DEV_PATH="$BASE_DIR"/"${PROJECT_NAME}"/dev
+STAGE_PATH="$BASE_DIR"/"${PROJECT_NAME}"/stage
+# Настройки для создания конфигурации nginx
 DOMAIN=".biko-solutions.dev"
-DEV_PORT_START=80
-STAGE_PORT_START=81
 ADMIN_EMAIL="no-reply@biko-solutions.dev"
 DEV_SUBDOMAIN="preprod-test"
 STAGE_SUBDOMAIN="stage-test"
 DOMAIN="biko-solutions.dev"
-OE_USER="bikoadmin"
+# Порты на которых будут работать odoo
+DEV_PORT_START=80
+STAGE_PORT_START=81
 
 create_odoo_config() {
+  # $1 - branch path
+  # $2 - branch name: dev, stage
+  # $3 - port (first 2 digits)
+
   cat <<EOF >"$1"/config_local/odoo-server.conf
 [options]
 addons_path = $1/odoo/addons,
@@ -121,10 +130,15 @@ EOF
 }
 
 create_postgres_user() {
+  # $1 - branch name: dev, stage
   docker exec postgres-postgres-1 psql -U root -d postgres -c "CREATE USER \"$PROJECT_NAME-$1\" WITH CREATEDB PASSWORD 'odoo';"
 }
 
 create_nginx_config() {
+  # $1 - branch name: dev, stage
+  # $2 - port (first 2 digits)
+  # $3 - subdomain
+
   UPSTREAM_ODOO=odoo_${PROJECT_NAME}_$1
   UPSTREAM_CHAT=odoo_${PROJECT_NAME}_$1_chat
   WEBSITE_NAME=${PROJECT_NAME}.${3}.${DOMAIN}
@@ -217,6 +231,8 @@ EOF
 }
 
 create_odoo_service() {
+  # $1 - branch name: dev, stage
+  # $2 - branch path
   cat <<EOF >/tmp/odoo.service
 [Unit]
 Description=${PROJECT_NAME}_$1
@@ -234,11 +250,11 @@ StandardOutput=journal+console
 [Install]
 WantedBy=multi-user.target
 EOF
-  sudo mv /tmp/odoo.service /etc/systemd/system/${PROJECT_NAME}_"$1".service
+  sudo mv /tmp/odoo.service /etc/systemd/system/"${PROJECT_NAME}"_"$1".service
   sudo systemctl daemon-reload
-  sudo systemctl enable ${PROJECT_NAME}_"$1"
-  sudo systemctl start ${PROJECT_NAME}_"$1"
-  sudo systemctl status ${PROJECT_NAME}_"$1"
+  sudo systemctl enable "${PROJECT_NAME}"_"$1"
+  sudo systemctl start "${PROJECT_NAME}"_"$1"
+  sudo systemctl status "${PROJECT_NAME}"_"$1"
 }
 
 create_project() {
