@@ -1,59 +1,37 @@
 #!/bin/bash
 
-# location /web/database/ {
-#   auth_basic "Protected Area";
-#   auth_basic_user_file /etc/nginx/.htpasswd;
-#   proxy_pass http://$UPSTREAM_ODOO;
-# }
+# предполагается, что на сервере уже развернут postgres, nginx, certbot, установлен apache2-utils для конфигурирования базовой HTTP аутентификации в Nginx
 
-# разворачиваем на сервере препрода
-# разворачиваем сразу две базы stage и dev
-# предполагается, что на сервере уже развернут postgres, nginx, certbot
-# предполагается, что postgres в докере (временно)
-# структура каталога
-# имя проекта
-#    dev/
-#    stage/
+exec > >(tee "$(pwd)"/install_project.log) 2>&1
 
 BASE_DIR=$(pwd)
-
-exec > >(tee "$BASE_DIR"/install_project.log) 2>&1
-
 # Пользователь от имени которого будет запускаться odoo
-OE_USER="bikoadmin"
+OE_USER=""
 # Репозиторий откуда мы будем брать проект
 REPO_URI=""
 # Название проекта она же папка проекта
 PROJECT_NAME=""
-DEV_PATH="$BASE_DIR"/"${PROJECT_NAME}"/dev
-STAGE_PATH="$BASE_DIR"/"${PROJECT_NAME}"/stage
+BRANCH_NAME=""
+PROJECT_PATH="$BASE_DIR"/"${PROJECT_NAME}"/"${BRANCH_NAME}"
 # Настройки для создания конфигурации nginx
-DOMAIN=".biko-solutions.dev"
-ADMIN_EMAIL="no-reply@biko-solutions.dev"
-DEV_SUBDOMAIN="preprod-test"
-STAGE_SUBDOMAIN="stage-test"
-DOMAIN="biko-solutions.dev"
+WEBSITE_NAME=""
+ADMIN_EMAIL=""
 # Порты на которых будут работать odoo
-DEV_PORT_START=80
-STAGE_PORT_START=81
+PORT_START=""
 
 create_odoo_config() {
-  # $1 - branch path
-  # $2 - branch name: dev, stage
-  # $3 - port (first 2 digits)
-
-  cat <<EOF >"$1"/config_local/odoo-server.conf
+  cat <<EOF >"$PROJECT_PATH"/config_local/odoo-server.conf
 [options]
-addons_path = $1/odoo/addons,
-  $1/extra_addons/core_addons,
-  $1/extra_addons/demo_addons,
-  $1/extra_addons/custom_addons
+addons_path = $PROJECT_PATH/odoo/addons,
+  $PROJECT_PATH/extra_addons/core_addons,
+  $PROJECT_PATH/extra_addons/demo_addons,
+  $PROJECT_PATH/extra_addons/custom_addons
 admin_passwd = admin25UX
 auth_admin_passkey_password = 443bc8FA
 auth_admin_passkey_send_to_user = False
 auth_admin_passkey_sysadmin_email = False
 csv_internal_sep = ,
-data_dir = $1/.local
+data_dir = $PROJECT_PATH/.local
 db_host = localhost
 db_maxconn = 64
 db_name = False
@@ -61,14 +39,14 @@ db_password = odoo
 db_port = 5432
 db_sslmode = prefer
 db_template = template0
-db_user = $PROJECT_NAME-$2
+db_user = $PROJECT_NAME-$BRANCH_NAME
 dbfilter = 
 demo = {}
 email_from = False
 geoip_database = /usr/share/GeoIP/GeoLite2-City.mmdb
 http_enable = True
 http_interface = 
-http_port = ${3}69
+http_port = ${PORT_START}69
 import_partial = 
 limit_memory_hard = 2147483648
 limit_memory_soft = 2155872256
@@ -81,8 +59,8 @@ log_db = False
 log_db_level = warning
 log_handler = :INFO
 log_level = info
-logfile = $1/odoo-server.log
-longpolling_port = ${3}72
+logfile = $PROJECT_PATH/odoo-server.log
+longpolling_port = ${PORT_START}72
 max_cron_threads = 1
 modules_auto_install_disabled = simbioz_speed_patch,simbioz_date_time,iap,iap_mail,crm_iap_lead_enrich,crm_iap_lead,account_edi_ubl_cii,snailmail,snailmail_account,web_progress,discuss_show_members,oi_mail,partner_autocomplete,sms,web_unsplash
 modules_auto_install_enabled = base_setup,bus,mail,auth_signup,module_change_auto_install,simbioz_dev_tools,ks_curved_backend_theme,ks_curved_backend_theme_chatter,simbioz_custom_css,base_module_reload,app_addons_view,web_dialog_size,disable_tour,rowno_in_tree,smart_warnings,sticky_kanban_header,sticky_notes,email_widget_validator,phone_widget_validator,dynamic_date_filter,hspl_no_mail_server_copied,auth_admin_passkey,auto_backup,base_custom_filter,base_export_manager,base_sparse_field,queue_job,base_import_async,base_optional_quick_create,base_technical_features,base_user_role,database_cleanup,date_range,document_url,email_template_qweb,hide_any_menu,listview_change_bgcolor,mail_optional_follower_notification,mail_quoted_reply,mail_restrict_follower_selection,mail_show_follower,mail_tracking,module_auto_update,rp_db_size_v13,sentry,web_advanced_search,calendar,board,mail_activity_board,web_group_expand,web_listview_range_select,web_m2x_options,web_m2x_options_manager,web_search_with_and,web_tree_many2one_clickable,web_widget_image_download,test_performance,test_mail,fetchmail_incoming_log,bi_all_in_one_hide,calendar_partner_color
@@ -130,24 +108,18 @@ EOF
 }
 
 create_postgres_user() {
-  # $1 - branch name: dev, stage
-  docker exec postgres-postgres-1 psql -U root -d postgres -c "CREATE USER \"$PROJECT_NAME-$1\" WITH CREATEDB PASSWORD 'odoo';"
+  sudo su - postgres -c "createuser -s \"$PROJECT_NAME-$BRANCH_NAME\"" 2>/dev/null || true
 }
 
 create_nginx_config() {
-  # $1 - branch name: dev, stage
-  # $2 - port (first 2 digits)
-  # $3 - subdomain
-
-  UPSTREAM_ODOO=odoo_${PROJECT_NAME}_$1
-  UPSTREAM_CHAT=odoo_${PROJECT_NAME}_$1_chat
-  WEBSITE_NAME=${PROJECT_NAME}.${3}.${DOMAIN}
+  UPSTREAM_ODOO=odoo_${PROJECT_NAME}_$BRANCH_NAME
+  UPSTREAM_CHAT=odoo_${PROJECT_NAME}_${BRANCH_NAME}_chat
   cat <<EOF >/tmp/nginx_site.conf
 upstream $UPSTREAM_ODOO {
-  server 127.0.0.1:${2}69;
+  server 127.0.0.1:${PORT_START}69;
 }
 upstream $UPSTREAM_CHAT {
-  server 127.0.0.1:${2}72;
+  server 127.0.0.1:${PORT_START}72;
 }
 
 server {
@@ -167,8 +139,8 @@ server {
 
 
   #   odoo    log files
-  access_log  /var/log/nginx/${PROJECT_NAME}_$1-access.log;
-  error_log       /var/log/nginx/${PROJECT_NAME}_$1-error.log;
+  access_log  /var/log/nginx/${PROJECT_NAME}_$BRANCH_NAME-access.log;
+  error_log       /var/log/nginx/${PROJECT_NAME}_$BRANCH_NAME-error.log;
 
   #   increase    proxy   buffer  size
   proxy_buffers   16  64k;
@@ -197,6 +169,11 @@ server {
   large_client_header_buffers 4 64k;
   client_max_body_size 0;
 
+  location /web/database/ {
+    auth_basic "Protected Area";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+    proxy_pass http://$UPSTREAM_ODOO;
+  }
   location / {
   proxy_pass    http://$UPSTREAM_ODOO;
   # by default, do not forward anything
@@ -222,77 +199,86 @@ server {
 
 }
 EOF
-  sudo mv /tmp/nginx_site.conf /etc/nginx/sites-available/${PROJECT_NAME}_"$1".conf
-  sudo ln -s /etc/nginx/sites-available/${PROJECT_NAME}_"$1".conf /etc/nginx/sites-enabled/${PROJECT_NAME}_"$1".conf
+  sudo mv /tmp/nginx_site.conf /etc/nginx/sites-available/"${PROJECT_NAME}"_"$BRANCH_NAME".conf
+  sudo ln -s /etc/nginx/sites-available/"${PROJECT_NAME}"_"$BRANCH_NAME".conf /etc/nginx/sites-enabled/"${PROJECT_NAME}"_"$BRANCH_NAME".conf
   sudo systemctl restart nginx
 
-  sudo certbot --nginx -d $WEBSITE_NAME --noninteractive --agree-tos --email $ADMIN_EMAIL --redirect
+  sudo certbot --nginx -d "$WEBSITE_NAME" --noninteractive --agree-tos --email "$ADMIN_EMAIL" --redirect
   sudo systemctl restart nginx
 }
 
 create_odoo_service() {
-  # $1 - branch name: dev, stage
-  # $2 - branch path
   cat <<EOF >/tmp/odoo.service
 [Unit]
-Description=${PROJECT_NAME}_$1
-After=network.target
+Description=${PROJECT_NAME}_$BRANCH_NAME
+Requires=postgresql.service
+After=network.target postgresql.service
 
 [Service]
 Type=simple
-SyslogIdentifier=${PROJECT_NAME}_$1
+SyslogIdentifier=${PROJECT_NAME}_$BRANCH_NAME
 PermissionsStartOnly=true
 User=$OE_USER
 Group=$OE_USER
-ExecStart=$2/venv/bin/python $2/odoo-bin -c $2/config_local/odoo-server.conf
+ExecStart=$PROJECT_PATH/venv/bin/python $PROJECT_PATH/odoo-bin -c $PROJECT_PATH/config_local/odoo-server.conf
 StandardOutput=journal+console
 
 [Install]
 WantedBy=multi-user.target
 EOF
-  sudo mv /tmp/odoo.service /etc/systemd/system/"${PROJECT_NAME}"_"$1".service
+  sudo mv /tmp/odoo.service /etc/systemd/system/"${PROJECT_NAME}"_"$BRANCH_NAME".service
   sudo systemctl daemon-reload
-  sudo systemctl enable "${PROJECT_NAME}"_"$1"
-  sudo systemctl start "${PROJECT_NAME}"_"$1"
-  sudo systemctl status "${PROJECT_NAME}"_"$1"
+  sudo systemctl enable "${PROJECT_NAME}"_"$BRANCH_NAME"
+  sudo systemctl start "${PROJECT_NAME}"_"$BRANCH_NAME"
+  sudo systemctl status "${PROJECT_NAME}"_"$BRANCH_NAME"
 }
 
 create_project() {
-  # $1 - branch name: dev, stage
-  # $2 - project path
-  # $3 - port (first 2 digits)
-  # $4 - subdomain
-
-  echo "====== CREATING $1 ======"
-  mkdir -p "$2"
+  echo "====== CREATING $BRANCH_NAME ======"
+  sudo mkdir -p "$PROJECT_PATH"
+  sudo chown $OE_USER:$OE_USER -R "$PROJECT_PATH"
   echo "====== 1. CLONING REPOSITORIES ======"
-  git clone --recurse-submodules -b "$1" "$REPO_URI" "$2"
+  git clone --recurse-submodules -b "$BRANCH_NAME" "$REPO_URI" "$PROJECT_PATH"
 
   echo "====== 2. CHECKOUT SUBMODULES TO NEEDED BRANCHES ======"
-  git -C "$2" submodule foreach -q --recursive 'branch="$(git config -f $toplevel/.gitmodules submodule.$name.branch)"; git checkout $branch'
+  git -C "$PROJECT_PATH" submodule foreach -q --recursive 'branch="$(git config -f $toplevel/.gitmodules submodule.$name.branch)"; git checkout $branch'
 
   echo "====== 3. INSTALLING PYTHON PACKAGES ======"
-  python3 -m venv "$2"/venv
-  source "$2"/venv/bin/activate
+  python3 -m venv "$PROJECT_PATH"/venv
+  source "$PROJECT_PATH"/venv/bin/activate
   pip install wheel setuptools
-  pip install -r "$2"/requirements.txt
-  pip install -r "$2"/extra_requirements.txt
-  pip install click-odoo-contrib -e "$2"
+  pip install -r "$PROJECT_PATH"/requirements.txt
+  pip install -r "$PROJECT_PATH"/extra_requirements.txt
+  pip install click-odoo-contrib -e "$PROJECT_PATH"
   deactivate
 
   echo "====== 4. CREATING ODOO CONFIGURATION ======"
-  mkdir -p "$2"/config_local
-  create_odoo_config "$2" "$1" "$3"
+  mkdir -p "$PROJECT_PATH"/config_local
+  create_odoo_config
 
   echo "====== 5. CREATE POSTGRES USER ======"
-  create_postgres_user "$1"
+  create_postgres_user
 
-  echo "====== 6. SETUP NGINX ======"
-  create_nginx_config "$1" "$3" "$4"
+  if [ -n "${WEBSITE_NAME}" ]; then
+    echo "====== 6. SETUP NGINX ======"
+    create_nginx_config
+  else
+    echo "Переменная WEBSITE_NAME не установлена. Пропуск настройки nginx."
+  fi
 
   echo "====== 7. SETUP ODOO SERVICE ======"
-  create_odoo_service "$1" "$2"
+  create_odoo_service
 }
 
-create_project dev "$DEV_PATH" "$DEV_PORT_START" "$DEV_SUBDOMAIN"
-create_project stage "$STAGE_PATH" "$STAGE_PORT_START" "$STAGE_SUBDOMAIN"
+check_variables() {
+  for var_name in OE_USER REPO_URI PROJECT_NAME BRANCH_NAME BASE_DIR PORT_START; do
+    if [ -z "${!var_name}" ]; then # Используем непосредственную подстановку для получения значения переменной
+      echo "Ошибка: переменная $var_name не установлена."
+      exit 1
+    fi
+  done
+}
+
+# Вызов функции проверки
+check_variables
+create_project
