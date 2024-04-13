@@ -18,6 +18,10 @@ WEBSITE_NAME=""
 ADMIN_EMAIL=""
 # Порты на которых будут работать odoo
 PORT_START=""
+# Пароль Odoo
+PG_PASSW=""
+ADMIN_PSW=""
+SUPER_ADMIN_PSW=""
 
 create_odoo_config() {
   cat <<EOF >"$PROJECT_PATH"/config_local/odoo-server.conf
@@ -26,8 +30,8 @@ addons_path = $PROJECT_PATH/odoo/addons,
   $PROJECT_PATH/extra_addons/core_addons,
   $PROJECT_PATH/extra_addons/demo_addons,
   $PROJECT_PATH/extra_addons/custom_addons
-admin_passwd = admin25UX
-auth_admin_passkey_password = 443bc8FA
+admin_passwd = $ADMIN_PSW
+auth_admin_passkey_password = $SUPER_ADMIN_PSW
 auth_admin_passkey_send_to_user = False
 auth_admin_passkey_sysadmin_email = False
 csv_internal_sep = ,
@@ -35,7 +39,7 @@ data_dir = $PROJECT_PATH/.local
 db_host = localhost
 db_maxconn = 64
 db_name = False
-db_password = odoo
+db_password = $PG_PASSW
 db_port = 5432
 db_sslmode = prefer
 db_template = template0
@@ -108,7 +112,10 @@ EOF
 }
 
 create_postgres_user() {
-  sudo su - postgres -c "createuser -s \"$PROJECT_NAME-$BRANCH_NAME\"" 2>/dev/null || true
+  sudo su - postgres -c "
+  createuser -s \"$PROJECT_NAME-$BRANCH_NAME\" &&
+  psql -c \"ALTER USER \\\"$PROJECT_NAME-$BRANCH_NAME\\\" WITH PASSWORD '$PG_PASSW' CREATEDB NOCREATEROLE NOSUPERUSER NOREPLICATION;\"
+  "
 }
 
 create_nginx_config() {
@@ -236,7 +243,7 @@ EOF
 create_project() {
   echo "====== CREATING $BRANCH_NAME ======"
   sudo mkdir -p "$PROJECT_PATH"
-  sudo chown $OE_USER:$OE_USER -R "$PROJECT_PATH"
+  sudo chown $OE_USER:$OE_USER -R "$BASE_DIR"/"${PROJECT_NAME}"/
   echo "====== 1. CLONING REPOSITORIES ======"
   git clone --recurse-submodules -b "$BRANCH_NAME" "$REPO_URI" "$PROJECT_PATH"
 
@@ -281,4 +288,6 @@ check_variables() {
 
 # Вызов функции проверки
 check_variables
+ssh-keyscan -H gitlab.simbioz.com.ua >>~/.ssh/known_hosts
+ssh-keyscan -H github.com >>~/.ssh/known_hosts
 create_project
