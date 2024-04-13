@@ -1,7 +1,5 @@
 #!/bin/bash
 
-OE_USER="bikoadmin"
-
 ###  WKHTMLTOPDF download links
 ## === Ubuntu Trusty x64 & x32 === (for other distributions please replace these two links,
 ## in order to have correct version of wkhtmltopdf installed, for a danger note refer to

@@ -177,34 +177,39 @@ server {
   client_header_buffer_size 4k;
   large_client_header_buffers 4 64k;
   client_max_body_size 0;
-
-  location /web/database/ {
-    auth_basic "Protected Area";
-    auth_basic_user_file /etc/nginx/.htpasswd;
-    proxy_pass http://$UPSTREAM_ODOO;
-  }
-  location / {
-  proxy_pass    http://$UPSTREAM_ODOO;
-  # by default, do not forward anything
-  proxy_redirect off;
-  }
-
-  location /longpolling {
-  proxy_pass http://$UPSTREAM_CHAT;
-  }
-  location ~* .(js|css|png|jpg|jpeg|gif|ico)$ {
-  expires 2d;
+EOF
+  if [ -f /etc/nginx/.htpasswd ]; then
+    cat <<EOF >>/tmp/nginx_site.conf
+location /web/database/ {
+  auth_basic "Protected Area";
+  auth_basic_user_file /etc/nginx/.htpasswd;
   proxy_pass http://$UPSTREAM_ODOO;
-  add_header Cache-Control "public, no-transform";
-  }
-  # cache some static data in memory for 60mins.
-  location ~ /[a-zA-Z0-9_-]*/static/ {
-  proxy_cache_valid 200 302 60m;
-  proxy_cache_valid 404      1m;
-  proxy_buffering    on;
-  expires 864000;
-  proxy_pass    http://$UPSTREAM_ODOO;
-  }
+}
+EOF
+  fi
+  cat <<EOF >>/tmp/nginx_site.conf
+location / {
+proxy_pass    http://$UPSTREAM_ODOO;
+# by default, do not forward anything
+proxy_redirect off;
+}
+
+location /longpolling {
+proxy_pass http://$UPSTREAM_CHAT;
+}
+location ~* .(js|css|png|jpg|jpeg|gif|ico)$ {
+expires 2d;
+proxy_pass http://$UPSTREAM_ODOO;
+add_header Cache-Control "public, no-transform";
+}
+# cache some static data in memory for 60mins.
+location ~ /[a-zA-Z0-9_-]*/static/ {
+proxy_cache_valid 200 302 60m;
+proxy_cache_valid 404      1m;
+proxy_buffering    on;
+expires 864000;
+proxy_pass    http://$UPSTREAM_ODOO;
+}
 
 }
 EOF
