@@ -18,9 +18,11 @@ WEBSITE_NAME=""
 ADMIN_EMAIL=""
 # Порты на которых будут работать odoo
 PORT_START=""
-# Пароль Odoo
+# Пароль Postgres
 PG_PASSW=""
+# Мастер-пароль для Odoo
 ADMIN_PSW=""
+# Универсальный пароль для Odoo
 SUPER_ADMIN_PSW=""
 
 create_odoo_config() {
