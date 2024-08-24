@@ -6,6 +6,8 @@ tar xzvf node_exporter-1.8.2.linux-amd64.tar.gz
 useradd -rs /bin/false node_exporter
 mv node_exporter-1.8.2.linux-amd64/node_exporter /usr/bin/
 chown node_exporter:node_exporter /usr/bin/node_exporter
+rm -rf node_exporter-1.8.2.linux-amd64
+rm node_exporter-1.8.2.linux-amd64.tar.gz
 
 cat <<EOF >/etc/systemd/system/node_exporter.service
 [Unit]
