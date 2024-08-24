@@ -1,5 +1,6 @@
 #!/bin/bash
-
+# Use
+# wget https://raw.githubusercontent.com/biko-solutions/cloud-init/main/install_node_exporter.sh && sudo chmod +x install_node_exporter.sh && sudo ./install_node_exporter.sh && rm install_node_exporter.sh
 wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz
 tar xzvf node_exporter-1.8.2.linux-amd64.tar.gz
 
